@@ -30,6 +30,23 @@ def erasmus_data_filtering():
 
 
 
+# Storing data into the database
+def erasmus_database():
+    all_countries_db()
+
+
+
+def all_countries_db():
+    df_spark.write \
+        .format("jdbc") \
+        .option("driver", "com.mysql.cj.jdbc.Driver") \
+        .option("url", "jdbc:mysql://localhost:3306/erasmus_db") \
+        .option("dbtable", "All_Countries") \
+        .option("user", "root") \
+        .option("password", "dummy") \
+        .mode("overwrite") \
+        .save()
 
 
 erasmus_data_filtering()
+erasmus_database()
