@@ -1,7 +1,6 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
 
-
 spark = SparkSession.builder \
     .master("local[*]") \
     .appName('Erasmus Students Data') \
@@ -11,14 +10,14 @@ spark = SparkSession.builder \
 
 # CSV -> PySpark DataFrame
 df_spark = spark.read \
-                .options(header=True, inferSchema=True, delimiter=',') \
-                .csv('Erasmus.csv')
+    .options(header=True, inferSchema=True, delimiter=',') \
+    .csv('Erasmus.csv')
 
 
-
-def erasmus_data_display():
+# Filtering and displaying Erasmus students data
+def erasmus_data_filtering():
     df_student_cnt = df_spark.groupBy(["Receiving Country Code", "Sending Country Code"]) \
-                             .count()
+        .count()
     df_student_cnt = df_student_cnt.orderBy("Receiving Country Code", "Sending Country Code")
 
     print('\n\n')
@@ -33,4 +32,4 @@ def erasmus_data_display():
 
 
 
-erasmus_data_display()
+erasmus_data_filtering()
