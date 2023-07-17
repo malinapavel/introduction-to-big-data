@@ -8,13 +8,13 @@ spark = SparkSession.builder \
     .config("spark.ui.port", "4040") \
     .getOrCreate()
 
-# CSV -> PySpark DataFrame
+### CSV -> PySpark DataFrame
 df_spark = spark.read \
     .options(header=True, inferSchema=True, delimiter=',') \
     .csv('Erasmus.csv')
 
 
-# Filtering and displaying Erasmus students data
+### Filtering and displaying Erasmus students data
 def erasmus_data_filtering():
     df_student_cnt = df_spark.groupBy(["Receiving Country Code", "Sending Country Code"]) \
         .count()
@@ -26,14 +26,16 @@ def erasmus_data_filtering():
 
     print('\n\n')
     print("~ Number of students that went on an Erasmus mobility, based on a Receiving Country Code from the following: LV, MK, MT")
-    df_student_cnt.where(col("Receiving Country Code").isin(["LV", "MK", "MT"])).show(n=50)
+    df_filtered = df_student_cnt.where(col("Receiving Country Code").isin(["LV", "MK", "MT"]))
+    df_filtered.show(n=50)
+
+    return df_filtered
 
 
-
-# Storing data into the database
-def erasmus_database():
+### Storing data into the database
+def erasmus_database(df):
     all_countries_db()
-
+    filtered_data_db(df)
 
 
 def all_countries_db():
@@ -48,5 +50,17 @@ def all_countries_db():
         .save()
 
 
-erasmus_data_filtering()
-erasmus_database()
+def filtered_data_db(df):
+      df.write \
+        .format("jdbc") \
+        .option("driver", "com.mysql.cj.jdbc.Driver") \
+        .option("url", "jdbc:mysql://localhost:3306/erasmus_db") \
+        .option("dbtable", "Filtered_Countries") \
+        .option("user", "root") \
+        .option("password", "dummy") \
+        .mode("overwrite") \
+        .save()
+
+
+df_filtered = erasmus_data_filtering()
+erasmus_database(df_filtered)
