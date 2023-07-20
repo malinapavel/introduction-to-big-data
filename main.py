@@ -33,9 +33,10 @@ def erasmus_data_filtering():
 
 
 ### Storing data into the database
-def erasmus_database(df):
+def erasmus_database(df, list_country_codes):
     all_countries_db()
     filtered_data_db(df)
+    list_countries_db(list_country_codes)
 
 
 def all_countries_db():
@@ -62,5 +63,21 @@ def filtered_data_db(df):
         .save()
 
 
+def list_countries_db(list_country_codes):
+    for country in list_country_codes:
+        table_name = country + "_Receiving"
+        country_df = df_spark.filter(df_spark["Receiving Country Code"] == country).drop("Receiving Country Code")
+        country_df.write \
+            .format("jdbc") \
+            .option("driver", "com.mysql.cj.jdbc.Driver") \
+            .option("url", "jdbc:mysql://localhost:3306/erasmus_db") \
+            .option("dbtable", table_name) \
+            .option("user", "root") \
+            .option("password", "dummy") \
+            .mode("overwrite") \
+            .save()
+
+
 df_filtered = erasmus_data_filtering()
-erasmus_database(df_filtered)
+list_country_codes = ['RO', 'HR', 'IT']
+erasmus_database(df_filtered, list_country_codes)
