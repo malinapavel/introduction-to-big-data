@@ -1,6 +1,11 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
 
+import plotly.express as px
+from dash import Dash, dcc, html, Input, Output
+
+
+
 spark = SparkSession.builder \
     .master("local[*]") \
     .appName('Erasmus Students Data') \
@@ -84,4 +89,20 @@ def list_countries_db(list_country_codes):
 # df_filter -> only the mobilities from LV, MK, MT as receiving country codes
 df_filtered_all, df_filtered = erasmus_data_filtering()
 list_country_codes = ['RO', 'HR', 'IT']
-erasmus_database(df_filtered, list_country_codes)
+#erasmus_database(df_filtered, list_country_codes)
+
+
+
+### Application development for data visualization
+
+app = Dash(__name__)
+
+app.layout = html.Div(children=[
+    html.H1(
+        children="Erasmus mobility data visualization",\
+        style={'textAlign' : 'center',
+               'fontFamily': 'Verdana',
+               'marginTop' : 50})
+])
+
+app.run_server(debug=True)
