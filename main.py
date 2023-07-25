@@ -17,7 +17,7 @@ df_spark = spark.read \
 ### Filtering and displaying Erasmus students data
 def erasmus_data_filtering():
     df_student_cnt = df_spark.groupBy(["Receiving Country Code", "Sending Country Code"]) \
-        .count()
+                             .count()
     df_student_cnt = df_student_cnt.orderBy("Receiving Country Code", "Sending Country Code")
 
     print('\n\n')
@@ -29,13 +29,13 @@ def erasmus_data_filtering():
     df_filtered = df_student_cnt.where(col("Receiving Country Code").isin(["LV", "MK", "MT"]))
     df_filtered.show(n=50)
 
-    return df_filtered
+    return df_student_cnt, df_filtered
 
 
 ### Storing data into the database
 def erasmus_database(df, list_country_codes):
     all_countries_db()
-    filtered_data_db(df)
+    filtered_data_db(df)  # df stores the mobilities in LV, MK, MT
     list_countries_db(list_country_codes)
 
 
@@ -51,6 +51,7 @@ def all_countries_db():
         .save()
 
 
+# store data regarding mobilities in LV, MK, MT
 def filtered_data_db(df):
       df.write \
         .format("jdbc") \
@@ -63,6 +64,7 @@ def filtered_data_db(df):
         .save()
 
 
+# store data regarding mobilities from a list of given receiving codes
 def list_countries_db(list_country_codes):
     for country in list_country_codes:
         table_name = country + "_Receiving"
@@ -78,6 +80,8 @@ def list_countries_db(list_country_codes):
             .save()
 
 
-df_filtered = erasmus_data_filtering()
+# df_filter_all -> all mobilities grouped by receiving and sending codes
+# df_filter -> only the mobilities from LV, MK, MT as receiving country codes
+df_filtered_all, df_filtered = erasmus_data_filtering()
 list_country_codes = ['RO', 'HR', 'IT']
 erasmus_database(df_filtered, list_country_codes)
