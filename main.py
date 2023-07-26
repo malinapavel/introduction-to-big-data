@@ -2,8 +2,8 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
 
 import plotly.express as px
-from dash import Dash, dcc, html, Input, Output
-
+from dash import Dash, dcc, html, Input, Output, ctx
+import dash_bootstrap_components as dbc
 
 
 spark = SparkSession.builder \
@@ -95,14 +95,46 @@ list_country_codes = ['RO', 'HR', 'IT']
 
 ### Application development for data visualization
 
-app = Dash(__name__)
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
-app.layout = html.Div(children=[
-    html.H1(
-        children="Erasmus mobility data visualization",\
-        style={'textAlign' : 'center',
-               'fontFamily': 'Verdana',
-               'marginTop' : 50})
-])
+app.layout = dbc.Container(children=[
+    html.H1(children="Erasmus mobility data visualization",\
+            style={'textAlign' : 'center',
+                   'marginTop' : 50}),
+    dbc.Container(className="col-lg-10 offset-lg-2",
+                  style={'marginTop': 100},
+                  children=[
+                    dbc.Button(children="Average Age/Country", id="btn1", color="primary", className="me-5"),
+                    dbc.Button(children="Average Mobility Duration/Country", id="btn2", color="warning", className="me-5"),
+                    dbc.Button(children="Students Sent/Country", id="btn3", color="success", className="me-5")
+                    # dbc.Button("Button 4", id="btn4", color="warning", className="me-5"),
+                    # dbc.Button("Button 5", id="btn5", color="info", className="me-5"),
+                    # dbc.Button("Button 6", id="btn6", color="danger", className="me-5")
+    ]),
+    dbc.Container(style={'marginTop': 70, 'marginLeft': 100},
+                  children=[
+                    html.Div(id="output_container")])
+
+], fluid=True)
+
+@app.callback(
+    Output("output_container", "children"),
+    Input("btn1", "n_clicks"),
+    Input("btn2", "n_clicks"),
+    Input("btn3", "n_clicks"),
+    prevent_initial_call=True,
+)
+def greet(_, __, ___):
+    button_clicked = ctx.triggered_id
+    if button_clicked == 'btn1':
+        return html.H6(children="Average age of students attending Erasmus mobilities for each country they come from [sending countries]:",\
+                       style={'marginTop': 50})
+    elif button_clicked == 'btn2':
+        return html.H6(children="Average mobility duration performed by students for each country [receiving countries]:",\
+                       style={'marginTop': 50})
+    elif button_clicked == 'btn3':
+        return html.H6(children="Number of students that went to a specific host country:",\
+                       style={'marginTop': 50})
+
 
 app.run_server(debug=True)
