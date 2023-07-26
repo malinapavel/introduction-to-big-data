@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col
+from pyspark.sql.functions import col, ceil
 
 import plotly.express as px
 from dash import Dash, dcc, html, Input, Output, ctx
@@ -87,9 +87,29 @@ def list_countries_db(list_country_codes):
 
 # df_filter_all -> all mobilities grouped by receiving and sending codes
 # df_filter -> only the mobilities from LV, MK, MT as receiving country codes
-df_filtered_all, df_filtered = erasmus_data_filtering()
-list_country_codes = ['RO', 'HR', 'IT']
+#df_filtered_all, df_filtered = erasmus_data_filtering()
+#list_country_codes = ['RO', 'HR', 'IT']
 #erasmus_database(df_filtered, list_country_codes)
+
+
+
+
+### Preparing DataFrames suitable for average age and mobility duration
+df_avg_age = df_spark.groupBy('Sending Country Code').mean()
+df_avg_age = df_avg_age.drop('avg(Mobility Duration)')\
+                       .withColumnRenamed('avg(Participant Age)', 'Average Participant Age')\
+                       .select("*", ceil(col('Average Participant Age')))\
+                       .drop('Average Participant Age')\
+                       .withColumnRenamed('CEIL(Average Participant Age)', 'Average Participant Age')
+
+df_avg_mobility = df_spark.groupBy('Receiving Country Code').mean()
+df_avg_mobility = df_avg_mobility.drop('avg(Participant Age)')\
+                                 .withColumnRenamed('avg(Mobility Duration)', 'Average Mobility Duration')\
+                                 .select("*", ceil(col('Average Mobility Duration')))\
+                                 .drop('Average Mobility Duration')\
+                                 .withColumnRenamed('CEIL(Average Mobility Duration)', 'Average Mobility Duration')
+
+
 
 
 
