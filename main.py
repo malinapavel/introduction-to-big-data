@@ -2,8 +2,12 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, ceil
 
 import plotly.express as px
-from dash import Dash, dcc, html, Input, Output, ctx
+import plotly.graph_objects as go
+
+from dash import Dash, dcc, html, Input, Output, ctx, State
 import dash_bootstrap_components as dbc
+
+
 
 
 spark = SparkSession.builder \
@@ -27,12 +31,12 @@ def erasmus_data_filtering():
 
     print('\n\n')
     print("~ Number of students that went on an Erasmus mobility, based on every Receiving Country Code")
-    df_student_cnt.show(n=df_student_cnt.count())
+    #df_student_cnt.show(n=df_student_cnt.count())
 
     print('\n\n')
     print("~ Number of students that went on an Erasmus mobility, based on a Receiving Country Code from the following: LV, MK, MT")
     df_filtered = df_student_cnt.where(col("Receiving Country Code").isin(["LV", "MK", "MT"]))
-    df_filtered.show(n=50)
+    #df_filtered.show(n=50)
 
     return df_student_cnt, df_filtered
 
@@ -87,9 +91,10 @@ def list_countries_db(list_country_codes):
 
 # df_filter_all -> all mobilities grouped by receiving and sending codes
 # df_filter -> only the mobilities from LV, MK, MT as receiving country codes
-#df_filtered_all, df_filtered = erasmus_data_filtering()
+df_filtered_all, df_filtered = erasmus_data_filtering()
 #list_country_codes = ['RO', 'HR', 'IT']
 #erasmus_database(df_filtered, list_country_codes)
+
 
 
 
@@ -98,17 +103,20 @@ def list_countries_db(list_country_codes):
 df_avg_age = df_spark.groupBy('Sending Country Code').mean()
 df_avg_age = df_avg_age.drop('avg(Mobility Duration)')\
                        .withColumnRenamed('avg(Participant Age)', 'Average Participant Age')\
-                       .select("*", ceil(col('Average Participant Age')))\
-                       .drop('Average Participant Age')\
-                       .withColumnRenamed('CEIL(Average Participant Age)', 'Average Participant Age')
+                       .toPandas()
+#print(df_avg_age.head(100))
 
 df_avg_mobility = df_spark.groupBy('Receiving Country Code').mean()
 df_avg_mobility = df_avg_mobility.drop('avg(Participant Age)')\
                                  .withColumnRenamed('avg(Mobility Duration)', 'Average Mobility Duration')\
-                                 .select("*", ceil(col('Average Mobility Duration')))\
-                                 .drop('Average Mobility Duration')\
-                                 .withColumnRenamed('CEIL(Average Mobility Duration)', 'Average Mobility Duration')
+                                 .toPandas()
+#print(df_avg_mobility.head(100))
 
+EU_countries = ['Albania', 'Austria', 'Belgium', 'Belarus', 'Bosnia', 'Bulgaria', 'Croatia', 'Cyprus', 'Czechia', 'Denmark',
+                'Estonia', 'Finland', 'France', 'Germany', 'Greece', 'Hungary', 'Iceland', 'Ireland', 'Italy', 'Kosovo',
+                'Latvia', 'Lithuania', 'Luxembourg', 'Malta', 'Moldova', 'Montenegro', 'Netherlands','Norway', 'North Macedonia',
+                'Poland', 'Portugal', 'Romania', 'Russia', 'Serbia', 'Slovakia', 'Slovenia', 'Spain', 'Sweden', 'Switzerland',
+                'Turkey', 'UK', 'Ukraine']
 
 
 
@@ -119,8 +127,8 @@ app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 app.layout = dbc.Container(children=[
     html.H1(children="Erasmus mobility data visualization",\
-            style={'textAlign' : 'center',
-                   'marginTop' : 50}),
+            style={'textAlign': 'center',
+                   'marginTop': 50}),
     dbc.Container(className="col-lg-10 offset-lg-2",
                   style={'marginTop': 100},
                   children=[
@@ -131,30 +139,73 @@ app.layout = dbc.Container(children=[
                     # dbc.Button("Button 5", id="btn5", color="info", className="me-5"),
                     # dbc.Button("Button 6", id="btn6", color="danger", className="me-5")
     ]),
+    dbc.Container(id="enter_field", style={'marginTop': 70, 'display': 'none'},
+                  children=[dbc.FormFloating(
+                                style={'marginTop': 70},
+                                className="col-lg-3",
+                                children=[
+                                    dbc.Input(id="country_code"),
+                                    dbc.Label("Enter a country code"),
+                                ]),
+                             dbc.Button("Visualize data", id="btn4", color="secondary", className="me-5", style={'marginTop': 30})]),
     dbc.Container(style={'marginTop': 70, 'marginLeft': 100},
                   children=[
-                    html.Div(id="output_container")])
-
+                    html.Div(id="output_container")]),
+    dbc.Container(id="display_map", style={'marginTop': 10, 'display': 'none'},
+                  children=[dcc.Graph(id='country_map')])
 ], fluid=True)
 
 @app.callback(
+    Output("enter_field", "style"),
     Output("output_container", "children"),
+    Output("display_map", "style"),
+    Output("country_map", "figure"),
     Input("btn1", "n_clicks"),
     Input("btn2", "n_clicks"),
     Input("btn3", "n_clicks"),
-    prevent_initial_call=True,
+    Input("btn4", "n_clicks"),
+    State("country_code", "value"),
+    prevent_initial_call=True
 )
-def greet(_, __, ___):
+def greet(_, __, ___, ____, code):
     button_clicked = ctx.triggered_id
-    if button_clicked == 'btn1':
-        return html.H6(children="Average age of students attending Erasmus mobilities for each country they come from [sending countries]:",\
-                       style={'marginTop': 50})
-    elif button_clicked == 'btn2':
-        return html.H6(children="Average mobility duration performed by students for each country [receiving countries]:",\
-                       style={'marginTop': 50})
-    elif button_clicked == 'btn3':
-        return html.H6(children="Number of students that went to a specific host country:",\
-                       style={'marginTop': 50})
+
+    match button_clicked:
+        case 'btn1':
+            text = html.H6(children="Average age of students attending Erasmus mobilities for each country they come from [sending countries]:",\
+                           style={'marginTop': 50})
+            fig = go.Figure(data=go.Choropleth(
+                            locations=EU_countries,
+                            z=df_avg_age['Average Participant Age'].astype(int),
+                            locationmode='country names'
+                  ))
+            fig.update_layout(height=800, geo_scope="europe")
+            return {'display': 'none'}, text, {'display': 'block'}, fig
+
+        case 'btn2':
+            text = html.H6(children="Average mobility duration performed by students for each country [receiving countries]:",\
+                           style={'marginTop': 50})
+            fig = go.Figure(data=go.Choropleth(
+                            locations=EU_countries,
+                            z=df_avg_mobility['Average Mobility Duration'].astype(int),
+                            locationmode='country names'
+                  ))
+            fig.update_layout(height=800, geo_scope="europe")
+            return {'display': 'none'}, text, {'display': 'block'}, fig
+
+        case 'btn3':
+            text = html.H6(children="Number of students that went to a specific host country:",
+                           style={'marginTop': 50})
+
+            df_cnt = df_filtered_all.where(col("Receiving Country Code") == code).toPandas()
+            fig = go.Figure(data=go.Choropleth(
+                    locations=EU_countries,
+                    z=df_cnt['count'].astype(int),
+                    locationmode='country names'
+            ))
+            fig.update_layout(height=800, geo_scope="europe")
+            return {'display': 'block'}, text, {'display': 'block'}, fig
+
 
 
 app.run_server(debug=True)
