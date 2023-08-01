@@ -7,7 +7,7 @@ spark = SparkSession.builder \
     .master("local[*]") \
     .appName('Erasmus Students Data') \
     .config("spark.driver.bindAddress", "localhost") \
-    .config("spark.ui.port", "4041") \
+    .config("spark.ui.port", "4040") \
     .getOrCreate()
 
 ### CSV -> PySpark DataFrame
@@ -24,12 +24,12 @@ def erasmus_data_filtering():
 
     print('\n\n')
     print("~ Number of students that went on an Erasmus mobility, based on every Receiving Country Code")
-    #df_student_cnt.show(n=df_student_cnt.count())
+    df_student_cnt.show(n=df_student_cnt.count())
 
     print('\n\n')
     print("~ Number of students that went on an Erasmus mobility, based on a Receiving Country Code from the following: LV, MK, MT")
     df_filtered = df_student_cnt.where(col("Receiving Country Code").isin(["LV", "MK", "MT"]))
-    #df_filtered.show(n=50)
+    df_filtered.show(n=50)
 
     return df_student_cnt, df_filtered
 
